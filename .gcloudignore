@@ -1,0 +1,23 @@
+# This file specifies files that are NOT uploaded to App Engine when deploying.
+.gcloudignore
+.git
+.gitignore
+
+# Node.js dependencies will be installed on the server
+node_modules/
+
+# Local env files — never deploy secrets
+.env
+.env.local
+.env*.local
+
+# Development files
+prisma/migrations/dev/
+*.md
+!README.md
+
+# Build artifacts (Next.js builds in CI/CD instead)
+# If you build locally: remove .next from this file
+
+# macOS
+.DS_Store
