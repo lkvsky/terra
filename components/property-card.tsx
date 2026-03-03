@@ -37,15 +37,17 @@ export function PropertyCard({
       onClick={() => onSelect?.(property)}
     >
       {/* Image — taller on mobile to give room for overlay */}
-      <div className="relative h-36 w-full sm:h-48">
+      <div className="relative h-40 w-full sm:h-24">
         {property.imageUrl && (
-          <Image
-            src={property.imageUrl}
-            alt={property.name}
-            fill
-            className="object-cover"
-            sizes="(max-width: 640px) 50vw, (max-width: 1200px) 50vw, 33vw"
-          />
+          <div className="absolute inset-x-0 bottom-0 top-[20px]">
+            <Image
+              src={property.imageUrl}
+              alt={property.name}
+              fill
+              className="object-contain object-center"
+              sizes="(max-width: 640px) 50vw, (max-width: 1200px) 50vw, 33vw"
+            />
+          </div>
         )}
 
         {/* Mobile overlay: title + button float over the image */}
