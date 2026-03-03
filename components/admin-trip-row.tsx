@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import { format } from "date-fns";
-import { CalendarDays, MapPin, Users, Check, X } from "lucide-react";
+import { CalendarDays, MapPin, Users, Check, X, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import type { TripStatus } from "@prisma/client";
 
 interface TripUser {
@@ -33,15 +34,37 @@ interface AdminTripRowProps {
       email: string;
     };
   };
+  onStatusChange?: (tripId: string, newStatus: TripStatus) => void;
 }
 
-export function AdminTripRow({ trip }: AdminTripRowProps) {
+const statusConfig: Record<
+  TripStatus,
+  {
+    label: string;
+    variant:
+      | "default"
+      | "secondary"
+      | "destructive"
+      | "outline"
+      | "success"
+      | "warning"
+      | "info";
+  }
+> = {
+  PENDING: { label: "Pending", variant: "warning" },
+  APPROVED: { label: "Approved", variant: "success" },
+  REJECTED: { label: "Rejected", variant: "destructive" },
+  ARCHIVED: { label: "Archived", variant: "secondary" },
+};
+
+export function AdminTripRow({ trip, onStatusChange }: AdminTripRowProps) {
   const router = useRouter();
   const [loading, setLoading] = useState<"approve" | "reject" | null>(null);
 
   const startDate = new Date(trip.startDate);
   const endDate = new Date(trip.endDate);
   const guestNames = trip.users.map((tu) => tu.user.name ?? tu.user.email);
+  const { label, variant } = statusConfig[trip.status];
 
   async function updateStatus(status: "APPROVED" | "REJECTED") {
     setLoading(status === "APPROVED" ? "approve" : "reject");
@@ -56,6 +79,7 @@ export function AdminTripRow({ trip }: AdminTripRowProps) {
         alert(data.error ?? "Failed to update trip status");
         return;
       }
+      onStatusChange?.(trip.id, status);
       router.refresh();
     } finally {
       setLoading(null);
@@ -67,7 +91,9 @@ export function AdminTripRow({ trip }: AdminTripRowProps) {
       <div className="space-y-1.5">
         <div className="flex items-center gap-2">
           <span className="font-medium">{trip.property.name}</span>
-          <Badge variant="warning">Pending</Badge>
+          <Badge variant={variant as Parameters<typeof Badge>[0]["variant"]}>
+            {label}
+          </Badge>
         </div>
         <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
           <span className="flex items-center gap-1">
@@ -94,25 +120,36 @@ export function AdminTripRow({ trip }: AdminTripRowProps) {
       </div>
 
       <div className="flex gap-2 sm:flex-shrink-0">
-        <Button
-          size="sm"
-          variant="outline"
-          className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
-          disabled={loading !== null}
-          onClick={() => updateStatus("REJECTED")}
-        >
-          <X className="h-4 w-4" />
-          {loading === "reject" ? "Rejecting..." : "Reject"}
-        </Button>
-        <Button
-          size="sm"
-          className="bg-green-600 hover:bg-green-700"
-          disabled={loading !== null}
-          onClick={() => updateStatus("APPROVED")}
-        >
-          <Check className="h-4 w-4" />
-          {loading === "approve" ? "Approving..." : "Approve"}
-        </Button>
+        {trip.status === "PENDING" ? (
+          <>
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+              disabled={loading !== null}
+              onClick={() => updateStatus("REJECTED")}
+            >
+              <X className="h-4 w-4" />
+              {loading === "reject" ? "Rejecting..." : "Reject"}
+            </Button>
+            <Button
+              size="sm"
+              className="bg-green-600 hover:bg-green-700"
+              disabled={loading !== null}
+              onClick={() => updateStatus("APPROVED")}
+            >
+              <Check className="h-4 w-4" />
+              {loading === "approve" ? "Approving..." : "Approve"}
+            </Button>
+          </>
+        ) : (
+          <Button size="sm" variant="outline" asChild>
+            <Link href={`/trips/${trip.id}`}>
+              <ExternalLink className="h-4 w-4" />
+              View
+            </Link>
+          </Button>
+        )}
       </div>
     </div>
   );

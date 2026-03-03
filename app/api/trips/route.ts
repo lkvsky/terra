@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { createCalendarEvent } from "@/lib/calendar";
 
 export async function GET() {
   const session = await auth();
@@ -49,6 +50,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Property not found" }, { status: 404 });
   }
 
+  const isAdmin = session.user.role === "ADMIN";
+
   // Collect all user IDs (creator + guests), deduplicated
   const allUserIds = Array.from(
     new Set([session.user.id, ...(guestUserIds ?? [])])
@@ -60,6 +63,7 @@ export async function POST(req: NextRequest) {
       startDate: new Date(startDate),
       endDate: new Date(endDate),
       notes: notes ?? null,
+      status: isAdmin ? "APPROVED" : "PENDING",
       createdById: session.user.id,
       users: {
         create: allUserIds.map((userId) => ({ userId })),
@@ -72,6 +76,31 @@ export async function POST(req: NextRequest) {
       },
     },
   });
+
+  // Auto-approved admin bookings get a calendar event immediately
+  if (isAdmin) {
+    try {
+      const guestNames = trip.users
+        .map((tu) => tu.user.name ?? tu.user.email)
+        .filter(Boolean) as string[];
+
+      const calendarEventId = await createCalendarEvent({
+        tripId: trip.id,
+        propertyName: trip.property.name,
+        guestNames,
+        startDate: trip.startDate,
+        endDate: trip.endDate,
+        notes: trip.notes,
+      });
+
+      await prisma.trip.update({
+        where: { id: trip.id },
+        data: { calendarEventId },
+      });
+    } catch (err) {
+      console.error("Failed to create calendar event for admin booking:", err);
+    }
+  }
 
   return NextResponse.json(trip, { status: 201 });
 }

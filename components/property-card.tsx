@@ -36,31 +36,54 @@ export function PropertyCard({
       )}
       onClick={() => onSelect?.(property)}
     >
-      {property.imageUrl && (
-        <div className="relative h-48 w-full">
+      {/* Image — taller on mobile to give room for overlay */}
+      <div className="relative h-36 w-full sm:h-48">
+        {property.imageUrl && (
           <Image
             src={property.imageUrl}
             alt={property.name}
             fill
             className="object-cover"
-            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            sizes="(max-width: 640px) 50vw, (max-width: 1200px) 50vw, 33vw"
           />
-        </div>
-      )}
-      <CardHeader className="pb-2">
+        )}
+
+        {/* Mobile overlay: title + button float over the image */}
+        {onSelect && (
+          <div className="absolute inset-x-0 bottom-0 sm:hidden bg-black/55 backdrop-blur-sm px-3 py-2">
+            <p className="text-white font-semibold text-sm leading-tight truncate">
+              {property.name}
+            </p>
+            <Button
+              variant={selected ? "default" : "outline"}
+              size="sm"
+              className="mt-1.5 h-7 w-full text-xs"
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelect(property);
+              }}
+            >
+              {selected ? "Selected" : actionLabel}
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {/* Desktop layout — hidden on mobile */}
+      <CardHeader className="hidden sm:block pb-2">
         <CardTitle className="text-lg">{property.name}</CardTitle>
         <CardDescription className="flex items-center gap-1">
           <MapPin className="h-3.5 w-3.5" />
           {property.location}
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="hidden sm:block">
         <p className="text-sm text-muted-foreground line-clamp-2">
           {property.description}
         </p>
       </CardContent>
       {onSelect && (
-        <CardFooter>
+        <CardFooter className="hidden sm:flex">
           <Button
             variant={selected ? "default" : "outline"}
             size="sm"

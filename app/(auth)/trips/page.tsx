@@ -34,7 +34,7 @@ export default async function TripsPage() {
           </p>
         </div>
         <Button asChild>
-          <Link href="/trips/new">
+          <Link href="/#properties">
             <PlusCircle className="h-4 w-4" />
             New Trip Request
           </Link>
@@ -47,7 +47,7 @@ export default async function TripsPage() {
             You haven&apos;t requested any trips yet.
           </p>
           <Button asChild>
-            <Link href="/trips/new">Request your first trip</Link>
+            <Link href="/#properties">Request your first trip</Link>
           </Button>
         </div>
       ) : (

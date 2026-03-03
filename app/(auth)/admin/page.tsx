@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { AdminTripRow } from "@/components/admin-trip-row";
+import { AdminTripList } from "@/components/admin-trip-list";
+import { PROPERTIES } from "@/lib/properties";
 import { Shield } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -9,8 +10,9 @@ export default async function AdminPage() {
   const session = await auth();
   if (!session?.user) return null;
 
-  const pendingTrips = await prisma.trip.findMany({
-    where: { status: "PENDING" },
+  const LIMIT = 20;
+
+  const rawTrips = await prisma.trip.findMany({
     include: {
       property: true,
       users: {
@@ -20,8 +22,23 @@ export default async function AdminPage() {
       },
       createdBy: { select: { id: true, name: true, email: true } },
     },
-    orderBy: { createdAt: "asc" },
+    take: LIMIT + 1,
+    orderBy: { startDate: "asc" },
   });
+
+  let initialNextCursor: string | null = null;
+  if (rawTrips.length > LIMIT) {
+    const next = rawTrips.pop();
+    initialNextCursor = next!.id;
+  }
+
+  // Serialize dates to strings for client component
+  const initialTrips = rawTrips.map((trip) => ({
+    ...trip,
+    startDate: trip.startDate.toISOString(),
+    endDate: trip.endDate.toISOString(),
+    createdAt: trip.createdAt.toISOString(),
+  }));
 
   return (
     <div className="space-y-6">
@@ -29,32 +46,15 @@ export default async function AdminPage() {
         <Shield className="h-7 w-7 text-primary" />
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Admin Panel</h1>
-          <p className="text-muted-foreground">
-            Review and approve pending trip requests.
-          </p>
+          <p className="text-muted-foreground">All trips across all statuses.</p>
         </div>
       </div>
 
-      {pendingTrips.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-16 text-center">
-          <Shield className="mb-4 h-8 w-8 text-muted-foreground" />
-          <p className="text-muted-foreground">
-            No pending trip requests. Check back later.
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          <p className="text-sm text-muted-foreground">
-            {pendingTrips.length} pending{" "}
-            {pendingTrips.length === 1 ? "request" : "requests"}
-          </p>
-          <div className="space-y-3">
-            {pendingTrips.map((trip) => (
-              <AdminTripRow key={trip.id} trip={trip} />
-            ))}
-          </div>
-        </div>
-      )}
+      <AdminTripList
+        initialTrips={initialTrips}
+        initialNextCursor={initialNextCursor}
+        properties={PROPERTIES}
+      />
     </div>
   );
 }
