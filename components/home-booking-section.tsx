@@ -59,11 +59,12 @@ export function HomeBookingSection({ properties, isAdmin }: HomeBookingSectionPr
   }
 
   function handleDateSelect(range: DateRange | undefined, triggerDate: Date) {
-    // If a complete range is already selected, treat any new click as a fresh start
-    if (dateRange?.from && dateRange?.to) {
+    if (!dateRange?.from || dateRange?.to) {
+      // No start yet, or a complete range — first click always sets only the start date
       setDateRange({ from: triggerDate, to: undefined });
       return;
     }
+    // Second click: finalize range and close
     setDateRange(range);
     if (range?.from && range?.to) {
       setCalendarOpen(false);

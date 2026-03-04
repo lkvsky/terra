@@ -70,6 +70,15 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
         token.id = user.id;
         token.role = dbUser?.role ?? "USER";
       }
+      // Auth.js always sets token.sub = user.id; use it as fallback if token.id missing
+      if (!token.id && token.sub) {
+        token.id = token.sub;
+        const dbUser = await prisma.user.findUnique({
+          where: { id: token.sub },
+          select: { role: true },
+        });
+        token.role = dbUser?.role ?? "USER";
+      }
       // On explicit session update, re-fetch role in case it changed
       if (trigger === "update" && token.id) {
         const dbUser = await prisma.user.findUnique({
@@ -82,7 +91,7 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
     },
     async session({ session, token }) {
       if (token) {
-        session.user.id = token.id;
+        session.user.id = token.id ?? token.sub!;
         session.user.role = token.role;
       }
       return session;

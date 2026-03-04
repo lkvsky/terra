@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { createCalendarEvent } from "@/lib/calendar";
+import { generateActionToken } from "@/lib/trip-tokens";
+import { sendTripRequestEmail } from "@/lib/email";
 
 export async function GET() {
   const session = await auth();
@@ -99,6 +101,35 @@ export async function POST(req: NextRequest) {
       });
     } catch (err) {
       console.error("Failed to create calendar event for admin booking:", err);
+    }
+  }
+
+  // Notify admins of pending trip requests
+  if (trip.status === "PENDING") {
+    try {
+      const admins = await prisma.user.findMany({
+        where: { role: "ADMIN" },
+        select: { email: true },
+      });
+      const adminEmails = admins.map((a) => a.email);
+      if (adminEmails.length > 0) {
+        const approveToken = generateActionToken(trip.id, "approve");
+        const rejectToken = generateActionToken(trip.id, "reject");
+        await sendTripRequestEmail({
+          tripId: trip.id,
+          propertyName: trip.property.name,
+          requesterName: session.user.name ?? "Someone",
+          requesterEmail: session.user.email!,
+          startDate: trip.startDate,
+          endDate: trip.endDate,
+          notes: trip.notes,
+          adminEmails,
+          approveToken,
+          rejectToken,
+        });
+      }
+    } catch (err) {
+      console.error("Failed to send admin notification email:", err);
     }
   }
 

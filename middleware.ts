@@ -6,6 +6,11 @@ export default auth((req) => {
   const isLoggedIn = !!session?.user;
   const isAdmin = session?.user?.role === "ADMIN";
 
+  // Token-authenticated review endpoint — no session required
+  if (nextUrl.pathname.match(/^\/api\/trips\/[^/]+\/review$/)) {
+    return NextResponse.next();
+  }
+
   // Public routes
   if (nextUrl.pathname.startsWith("/login")) {
     if (isLoggedIn) {
