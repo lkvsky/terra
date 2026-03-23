@@ -9,6 +9,11 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "Terra",
   description: "Book trips to Lucovsky family properties",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Terra",
+  },
 };
 
 export default async function RootLayout({
