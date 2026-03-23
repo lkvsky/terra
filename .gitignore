@@ -43,3 +43,6 @@ prisma/*.db-journal
 !package.json
 !tsconfig.json
 !components.json
+
+# App Engine secrets (never commit)
+secrets.yaml

@@ -16,12 +16,6 @@ declare module "next-auth" {
   }
 }
 
-declare module "next-auth/jwt" {
-  interface JWT {
-    id: string;
-    role: Role;
-  }
-}
 
 export const { auth, handlers, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
@@ -61,42 +55,45 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
       return true;
     },
     async jwt({ token, user, trigger }) {
+      const t = token as typeof token & { id: string; role: Role };
       // On first sign-in, user object is present — fetch role from DB
       if (user?.id) {
         const dbUser = await prisma.user.findUnique({
           where: { id: user.id },
           select: { role: true },
         });
-        token.id = user.id;
-        token.role = dbUser?.role ?? "USER";
+        t.id = user.id;
+        t.role = dbUser?.role ?? "USER";
       }
       // Auth.js always sets token.sub = user.id; use it as fallback if token.id missing
-      if (!token.id && token.sub) {
-        token.id = token.sub;
+      if (!t.id && token.sub) {
+        t.id = token.sub;
         const dbUser = await prisma.user.findUnique({
           where: { id: token.sub },
           select: { role: true },
         });
-        token.role = dbUser?.role ?? "USER";
+        t.role = dbUser?.role ?? "USER";
       }
       // On explicit session update, re-fetch role in case it changed
-      if (trigger === "update" && token.id) {
+      if (trigger === "update" && t.id) {
         const dbUser = await prisma.user.findUnique({
-          where: { id: token.id },
+          where: { id: t.id },
           select: { role: true },
         });
-        if (dbUser) token.role = dbUser.role;
+        if (dbUser) t.role = dbUser.role;
       }
-      return token;
+      return t;
     },
     async session({ session, token }) {
-      if (token) {
-        session.user.id = token.id ?? token.sub!;
-        session.user.role = token.role;
+      const t = token as typeof token & { id: string; role: Role };
+      if (t) {
+        session.user.id = t.id ?? token.sub!;
+        session.user.role = t.role;
       }
       return session;
     },
   },
+  trustHost: true,
   pages: {
     signIn: "/login",
     error: "/login",
